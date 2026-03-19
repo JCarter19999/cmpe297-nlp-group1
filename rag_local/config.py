@@ -30,6 +30,7 @@ DEFAULT_CONFIG_PATH = Path(__file__).parent / "config.local.json"
 @dataclass(frozen=True)
 class AppConfig:
     # Ollama host
+    """Represents app config."""
     ollama_host: str = "http://localhost:11434"
 
     # Canonical chat model name
@@ -67,6 +68,7 @@ class AppConfig:
 
 
 def get_config(config_path: Optional[str | Path] = None) -> AppConfig:
+    """Get config."""
     base = AppConfig()
 
     cfg_file = Path(config_path).expanduser().resolve() if config_path else DEFAULT_CONFIG_PATH
@@ -110,6 +112,7 @@ def get_config(config_path: Optional[str | Path] = None) -> AppConfig:
 
 
 def _env_bool(name: str, default: bool) -> bool:
+    """Internal helper for env bool."""
     val = os.getenv(name)
     if val is None:
         return default

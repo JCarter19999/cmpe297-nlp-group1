@@ -36,6 +36,7 @@ import urllib.error
 
 
 def _l2_normalize(vec: List[float]) -> List[float]:
+    """Internal helper for l2 normalize."""
     n = 0.0
     for x in vec:
         n += x * x
@@ -68,12 +69,15 @@ class OllamaEmbedder:
     normalize: bool = True
 
     def embed_texts(self, texts: Sequence[str]) -> List[List[float]]:
+        """Embed texts."""
         return [self._embed_one(t) for t in texts]
 
     def embed_query(self, query: str) -> List[float]:
+        """Embed query."""
         return self._embed_one(query)
 
     def _embed_one(self, text: str) -> List[float]:
+        """Internal helper for embed one."""
         t = (text or "").strip()
         if not t:
             # Return a small deterministic vector for empty input
@@ -126,12 +130,15 @@ class HashEmbedder:
     normalize: bool = True
 
     def embed_texts(self, texts: Sequence[str]) -> List[List[float]]:
+        """Embed texts."""
         return [self._hash_to_vec(t) for t in texts]
 
     def embed_query(self, query: str) -> List[float]:
+        """Embed query."""
         return self._hash_to_vec(query)
 
     def _hash_to_vec(self, text: str) -> List[float]:
+        """Internal helper for hash to vec."""
         t = (text or "").encode("utf-8", errors="ignore")
         if not t:
             v = [0.0] * self.dim
@@ -171,6 +178,7 @@ class SentenceTransformersEmbedder:
     normalize: bool = True
 
     def __post_init__(self) -> None:
+        """Internal helper for post init."""
         try:
             from sentence_transformers import SentenceTransformer  # type: ignore
         except ImportError as e:
@@ -182,10 +190,12 @@ class SentenceTransformersEmbedder:
         self._model = SentenceTransformer(self.model)
 
     def embed_texts(self, texts: Sequence[str]) -> List[List[float]]:
+        """Embed texts."""
         vecs = self._model.encode(list(texts),normalize_embeddings=self.normalize,convert_to_numpy=True,show_progress_bar=False)
         return vecs.tolist()
 
     def embed_query(self, query: str) -> List[float]:
+        """Embed query."""
         vec = self._model.encode(query,normalize_embeddings=self.normalize,convert_to_numpy=True,show_progress_bar=False)
         return vec.tolist()
 

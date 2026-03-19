@@ -188,6 +188,7 @@ def chunk_text(
 # -----------------------------
 
 def _validate_params(*, chunk_size: int, overlap: int) -> None:
+    """Internal helper for validate params."""
     if chunk_size <= 0:
         raise ValueError(f"chunk_size must be > 0, got {chunk_size}")
     if overlap < 0:

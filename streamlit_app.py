@@ -1,4 +1,6 @@
+"""Streamlit interface for the local RAG chatbot workflow."""
 from __future__ import annotations
+
 
 from pathlib import Path
 from typing import Any, Dict, List
@@ -70,6 +72,41 @@ SEARCH_STRATEGY_PRESETS = {
     },
 }
 
+FAILURE_TAG_GUIDE = {
+    "retrieval_miss": {
+        "what_it_means": "The retriever likely missed relevant evidence (or returned no sources).",
+        "recommended_actions": [
+            "Rebuild/refresh the index and verify the target docs were fetched into this corpus.",
+            "Increase retrieval breadth (higher top_k, larger candidate pool, broader query wording).",
+            "Use Hybrid/Academic search to add stronger source coverage for the question.",
+        ],
+    },
+    "grounding_risk": {
+        "what_it_means": "Answer content has weak overlap with retrieved source snippets.",
+        "recommended_actions": [
+            "Tighten prompt instructions to answer only from provided sources.",
+            "Increase context budget (top_k / max_context_chars) so key evidence is available.",
+            "Prefer higher-quality sources and remove low-signal documents from the corpus.",
+        ],
+    },
+    "off_topic": {
+        "what_it_means": "Answer appears weakly aligned with the user question.",
+        "recommended_actions": [
+            "Rewrite question with clearer scope and desired output format.",
+            "Use a precision-focused search strategy before asking follow-up questions.",
+            "Update system prompt to prioritize direct question answering first.",
+        ],
+    },
+    "missing_citations": {
+        "what_it_means": "Sources were available but the answer did not include [S#] citations.",
+        "recommended_actions": [
+            "Keep citation requirement explicit in the system prompt.",
+            "Ask for citation-first output format (claims followed by [S#]).",
+            "Verify retrieved snippets are specific enough to cite directly.",
+        ],
+    },
+}
+
 
 def resolve_search_strategy(
     strategy_name: str,
@@ -82,6 +119,7 @@ def resolve_search_strategy(
     audience: float,
     prefilter_k: int,
 ):
+    """Resolve search strategy."""
     preset = SEARCH_STRATEGY_PRESETS.get(strategy_name, SEARCH_STRATEGY_PRESETS["Balanced"])
 
     if not advanced_override:
@@ -101,6 +139,7 @@ def resolve_search_strategy(
 # -----------------------------
 @st.cache_data(ttl=3600, show_spinner=False)
 def cached_openalex_search(query: str, limit: int, mailto: str):
+    """Cached openalex search."""
     client = OpenAlexClient()
     mailto_val = mailto.strip() or None
     return client.search_works(
@@ -112,6 +151,7 @@ def cached_openalex_search(query: str, limit: int, mailto: str):
 
 
 def _init_state():
+    """Internal helper for init state."""
     if "messages" not in st.session_state:
         st.session_state.messages = []
     if "index" not in st.session_state:
@@ -312,6 +352,7 @@ if rebuild_idx:
         progress_bar = progress_placeholder.progress(0, text="Starting rebuild...")
 
         def ui_progress(frac: float, message: str) -> None:
+            """Ui progress."""
             pct = int(max(0.0, min(1.0, frac)) * 100)
             progress_bar.progress(pct, text=message)
             status_placeholder.caption(f"{pct}% · {message}")
@@ -814,15 +855,49 @@ if eval_result:
     with st.expander("Conversation evaluation", expanded=False):
         summary = eval_result.get("summary", {})
         rows = eval_result.get("rows", [])
+        tag_counts = summary.get("failure_tag_counts", {}) or {}
 
         c1, c2, c3, c4, c5 = st.columns(5)
         c1.metric("Turns", summary.get("n", 0))
-        c2.metric("Relevance", f"{summary.get('relevance_avg', 0.0):.2f}")
-        c3.metric("Groundedness", f"{summary.get('groundedness_avg', 0.0):.2f}")
-        c4.metric("Retrieval rel.", f"{summary.get('retrieval_relevance_avg', 0.0):.2f}")
-        c5.metric("Citation cov.", f"{summary.get('citation_coverage_avg', 0.0):.2f}")
+        c2.metric("Semantic corr.", f"{summary.get('semantic_correctness_avg', 0.0):.2f}")
+        c3.metric("Relevance", f"{summary.get('relevance_avg', 0.0):.2f}")
+        c4.metric("Groundedness", f"{summary.get('groundedness_avg', 0.0):.2f}")
+        c5.metric("Retrieval rel.", f"{summary.get('retrieval_relevance_avg', 0.0):.2f}")
+
+        d1, d2, d3, d4 = st.columns(4)
+        d1.metric("Citation cov.", f"{summary.get('citation_coverage_avg', 0.0):.2f}")
+        d2.metric("Latency p50", f"{summary.get('latency_p50_s', 0.0):.2f}s")
+        d3.metric("Latency p95", f"{summary.get('latency_p95_s', 0.0):.2f}s")
+        d4.metric("Retrieval / Gen", f"{summary.get('retrieval_avg_s', 0.0):.2f}s / {summary.get('generation_avg_s', 0.0):.2f}s")
 
         st.markdown(f"**Average latency:** {summary.get('latency_avg_s', 0.0):.2f}s")
+
+        st.markdown("**Failure tags**")
+        if tag_counts:
+            st.caption("Detected potential failure patterns across evaluated assistant turns.")
+            guide_rows = []
+            for tag, count in tag_counts.items():
+                guide = FAILURE_TAG_GUIDE.get(
+                    tag,
+                    {
+                        "what_it_means": "No explainer available.",
+                        "recommended_actions": ["Inspect this tag in eval_rag.py for scoring logic."],
+                    },
+                )
+                guide_rows.append(
+                    {
+                        "tag": tag,
+                        "count": count,
+                        "what_it_means": guide["what_it_means"],
+                        "recommended_actions": " ".join(
+                            f"{i+1}) {a}" for i, a in enumerate(guide["recommended_actions"])
+                        ),
+                    }
+                )
+            st.dataframe(guide_rows, use_container_width=True)
+        else:
+            st.caption("No failure tags detected in this evaluation run.")
+
         if rows:
             display_rows = []
             for r in rows:
@@ -830,11 +905,15 @@ if eval_result:
                     {
                         "turn_index": r.get("turn_index"),
                         "question": r.get("question"),
+                        "semantic_correctness": r.get("semantic_correctness"),
                         "relevance": r.get("relevance"),
                         "groundedness": r.get("groundedness"),
                         "retrieval_relevance": r.get("retrieval_relevance"),
                         "citation_coverage": r.get("citation_coverage"),
                         "latency_s": r.get("latency_s"),
+                        "retrieval_s": r.get("retrieval_s"),
+                        "generation_s": r.get("generation_s"),
+                        "failure_tags": ",".join(r.get("failure_tags", [])),
                     }
                 )
             st.dataframe(display_rows, use_container_width=True)
@@ -892,19 +971,21 @@ if prompt:
 
     with st.chat_message("assistant"):
         with st.spinner("Thinking..."):
-            import time
-
-            t0 = time.perf_counter()
             try:
-                reply, sources = answer_turn(
+                reply, sources, trace = answer_turn(
                     history=st.session_state.messages,
                     user_text=prompt,
                     cfg=st.session_state.cfg,
                     index=st.session_state.index,
+                    return_trace=True,
                 )
             except Exception as e:
                 reply, sources = f"Error: {e}", []
-            latency_s = time.perf_counter() - t0
+                trace = {"retrieval_s": 0.0, "generation_s": 0.0, "total_s": 0.0}
+
+            latency_s = float(trace.get("total_s", 0.0) or 0.0)
+            retrieval_s = float(trace.get("retrieval_s", 0.0) or 0.0)
+            generation_s = float(trace.get("generation_s", 0.0) or 0.0)
 
         st.markdown(reply)
 
@@ -923,6 +1004,8 @@ if prompt:
             "content": reply,
             "sources": sources,
             "latency_s": round(latency_s, 4),
+            "retrieval_s": round(retrieval_s, 4),
+            "generation_s": round(generation_s, 4),
         }
     )
 

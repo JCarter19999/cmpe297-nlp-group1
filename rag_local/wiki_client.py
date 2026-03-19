@@ -1,4 +1,6 @@
+"""Core logic for wiki client."""
 from __future__ import annotations
+
 
 import re
 from typing import Dict, List, Optional
@@ -13,6 +15,7 @@ HEADERS = {
 
 
 def _clean_html_snippet(text: str) -> str:
+    """Internal helper for clean html snippet."""
     text = text or ""
     text = re.sub(r"<[^>]+>", "", text)
     return text.strip()

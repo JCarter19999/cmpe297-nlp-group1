@@ -1,4 +1,6 @@
+"""Core logic for ollama client."""
 import json
+
 import urllib.request
 import urllib.error
 

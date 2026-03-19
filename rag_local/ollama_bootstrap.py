@@ -1,4 +1,6 @@
+"""Core logic for ollama bootstrap."""
 from __future__ import annotations
+
 
 import subprocess
 from dataclasses import dataclass
@@ -9,11 +11,13 @@ import requests
 
 @dataclass
 class OllamaStatus:
+    """Represents ollama status."""
     ok: bool
     message: str
 
 
 def ollama_is_reachable(host: str, timeout_s: int = 2) -> bool:
+    """Ollama is reachable."""
     host = host.rstrip("/")
     try:
         r = requests.get(f"{host}/api/tags", timeout=timeout_s)

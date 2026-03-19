@@ -53,6 +53,7 @@ from pypdf import PdfReader
 # -----------------------------
 
 class Document(TypedDict, total=False):
+    """Represents document."""
     doc_id: str
     text: str
     source: str
@@ -185,6 +186,7 @@ def _rel_source(path: Path, root: Path) -> str:
 
 
 def _warn(msg: str) -> None:
+    """Internal helper for warn."""
     print(f"[warn] {msg}")
 
 
@@ -193,6 +195,7 @@ def _warn(msg: str) -> None:
 # -----------------------------
 
 def _read_text(path: Path) -> str:
+    """Internal helper for read text."""
     try:
         return path.read_text(encoding="utf-8", errors="ignore")
     except Exception:
@@ -200,6 +203,7 @@ def _read_text(path: Path) -> str:
 
 
 def _read_json(path: Path) -> Any:
+    """Internal helper for read json."""
     try:
         return json.loads(path.read_text(encoding="utf-8", errors="ignore"))
     except Exception:

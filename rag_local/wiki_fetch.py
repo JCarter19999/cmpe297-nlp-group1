@@ -1,4 +1,6 @@
+"""Core logic for wiki fetch."""
 from __future__ import annotations
+
 
 import json
 import re
@@ -9,6 +11,7 @@ from rag_local.wiki_client import fetch_wikipedia_page
 
 
 def _slugify(text: str, max_len: int = 100) -> str:
+    """Internal helper for slugify."""
     text = (text or "").strip().lower()
     text = re.sub(r"[^a-z0-9]+", "-", text)
     text = re.sub(r"-{2,}", "-", text).strip("-")
@@ -18,6 +21,7 @@ def _slugify(text: str, max_len: int = 100) -> str:
 
 
 def _query_slug(query: str) -> str:
+    """Internal helper for query slug."""
     return _slugify(query or "wikipedia-search", max_len=60)
 
 

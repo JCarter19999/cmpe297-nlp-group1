@@ -37,20 +37,24 @@ DEFAULT_CACHE_DIR = Path(__file__).parent / "cache" / "arxiv_queries"
 
 
 def _norm_ws(s: str) -> str:
+    """Internal helper for norm ws."""
     return " ".join((s or "").split()).strip()
 
 
 def _sha256_hex(s: str) -> str:
+    """Internal helper for sha256 hex."""
     return hashlib.sha256(s.encode("utf-8")).hexdigest()
 
 
 def _cache_key(params: Dict[str, Any]) -> str:
     # Deterministic key for params
+    """Internal helper for cache key."""
     stable = json.dumps(params, sort_keys=True, ensure_ascii=False)
     return _sha256_hex(stable)
 
 
 def _read_cache(cache_dir: Path, key: str) -> Optional[Dict[str, Any]]:
+    """Internal helper for read cache."""
     path = cache_dir / f"{key}.json"
     if not path.exists():
         return None
@@ -58,6 +62,7 @@ def _read_cache(cache_dir: Path, key: str) -> Optional[Dict[str, Any]]:
 
 
 def _write_cache(cache_dir: Path, key: str, payload: Dict[str, Any]) -> Path:
+    """Internal helper for write cache."""
     cache_dir.mkdir(parents=True, exist_ok=True)
     path = cache_dir / f"{key}.json"
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")

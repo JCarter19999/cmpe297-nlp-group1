@@ -27,11 +27,13 @@ ProgressCallback = Optional[Callable[[float, str], None]]
 
 @dataclass(frozen=True)
 class BuildStats:
+    """Represents build stats."""
     doc_count: int
     chunk_count: int
 
 
 def _emit(progress_callback: ProgressCallback, frac: float, message: str) -> None:
+    """Internal helper for emit."""
     if progress_callback is None:
         return
     frac = max(0.0, min(1.0, float(frac)))
@@ -119,10 +121,12 @@ def build_index(
 
 
 def save_index(index: SimpleLocalIndex, path: Union[str, Path]) -> None:
+    """Save index."""
     index.save(path)
 
 
 def load_index(path: Union[str, Path], *, embedder: Embedder) -> SimpleLocalIndex:
+    """Load index."""
     return SimpleLocalIndex.load(path, embedder=embedder)
 
 

@@ -47,6 +47,7 @@ def _safe_folder_name(arxiv_id: str) -> str:
 
 
 def _format_paper_txt(p: Dict[str, Any]) -> str:
+    """Internal helper for format paper txt."""
     title = p.get("title", "")
     authors = p.get("authors", []) or []
     published = p.get("published", "")
@@ -76,6 +77,7 @@ def _format_paper_txt(p: Dict[str, Any]) -> str:
     return "\n".join([line.rstrip() for line in header_lines]).strip() + "\n"
 
 def _download_pdf(pdf_url: str, dest_path: Path, timeout_s: int = 60) -> None:
+    """Internal helper for download pdf."""
     dest_path.parent.mkdir(parents=True, exist_ok=True)
     req = urllib.request.Request(pdf_url, headers={"User-Agent": "cmpe297-rag-tutor/1.0"})
     try:
@@ -86,6 +88,7 @@ def _download_pdf(pdf_url: str, dest_path: Path, timeout_s: int = 60) -> None:
 
 
 def _extract_text_from_pdf(pdf_path: Path) -> str:
+    """Internal helper for extract text from pdf."""
     reader = PdfReader(str(pdf_path))
     parts = []
     for i, page in enumerate(reader.pages):
@@ -210,6 +213,7 @@ def fetch_arxiv_papers_to_data(
 
 
 def _parse_args() -> argparse.Namespace:
+    """Internal helper for parse args."""
     ap = argparse.ArgumentParser(description="Fetch arXiv papers into rag_local/Data/arxiv/")
     ap.add_argument("query", type=str, help="Search topic / keywords for arXiv")
     ap.add_argument("--max-results", type=int, default=3, help="Max number of papers to fetch")
@@ -222,6 +226,7 @@ def _parse_args() -> argparse.Namespace:
 
 
 def main() -> None:
+    """Main."""
     args = _parse_args()
     cats = [c.strip() for c in args.categories.split(",") if c.strip()] if args.categories else None
 

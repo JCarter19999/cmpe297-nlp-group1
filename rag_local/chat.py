@@ -1,4 +1,6 @@
+"""Core logic for chat."""
 from __future__ import annotations
+
 
 from pathlib import Path
 from typing import Dict, List, Literal
@@ -16,6 +18,7 @@ Message = Dict[str, str]
 
 
 def _append_and_trim(history: List[Message], msg: Message, max_messages: int) -> None:
+    """Internal helper for append and trim."""
     history.append(msg)
     if max_messages <= 0:
         history.clear()
@@ -25,6 +28,7 @@ def _append_and_trim(history: List[Message], msg: Message, max_messages: int) ->
 
 
 def main() -> None:
+    """Main."""
     cfg = get_config()
 
     history: List[Message] = []

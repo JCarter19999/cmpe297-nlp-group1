@@ -1,4 +1,6 @@
+"""Core logic for chat store."""
 from __future__ import annotations
+
 
 import json
 from dataclasses import dataclass
@@ -9,6 +11,7 @@ from typing import Dict, List, Optional
 
 @dataclass
 class ChatRecord:
+    """Represents chat record."""
     chat_id: str
     title: str
     created_at: str
@@ -17,14 +20,17 @@ class ChatRecord:
 
 
 def _now_iso() -> str:
+    """Internal helper for now iso."""
     return datetime.now().isoformat(timespec="seconds")
 
 
 def default_chat_id() -> str:
+    """Default chat id."""
     return "chat-" + datetime.now().strftime("%Y%m%d-%H%M%S")
 
 
 def sanitize_chat_id(chat_id: str) -> str:
+    """Sanitize chat id."""
     chat_id = (chat_id or "").strip().lower()
     safe = []
     for ch in chat_id:
@@ -37,16 +43,19 @@ def sanitize_chat_id(chat_id: str) -> str:
 
 
 def get_chat_dir(corpus_root: Path) -> Path:
+    """Get chat dir."""
     d = corpus_root / "chats"
     d.mkdir(parents=True, exist_ok=True)
     return d
 
 
 def get_chat_path(corpus_root: Path, chat_id: str) -> Path:
+    """Get chat path."""
     return get_chat_dir(corpus_root) / f"{sanitize_chat_id(chat_id)}.json"
 
 
 def derive_chat_title(messages: List[Dict], fallback: str = "Untitled Chat") -> str:
+    """Derive chat title."""
     for m in messages:
         if m.get("role") == "user":
             txt = (m.get("content") or "").strip().replace("\n", " ")
@@ -56,6 +65,7 @@ def derive_chat_title(messages: List[Dict], fallback: str = "Untitled Chat") -> 
 
 
 def list_chats(corpus_root: Path) -> List[Dict]:
+    """List chats."""
     chat_dir = get_chat_dir(corpus_root)
     rows: List[Dict] = []
 
@@ -79,6 +89,7 @@ def list_chats(corpus_root: Path) -> List[Dict]:
 
 
 def load_chat(corpus_root: Path, chat_id: str) -> Optional[ChatRecord]:
+    """Load chat."""
     path = get_chat_path(corpus_root, chat_id)
     if not path.exists():
         return None
@@ -100,6 +111,7 @@ def save_chat(
     messages: List[Dict],
     title: Optional[str] = None,
 ) -> ChatRecord:
+    """Save chat."""
     chat_id = sanitize_chat_id(chat_id)
     path = get_chat_path(corpus_root, chat_id)
 
@@ -130,6 +142,7 @@ def save_chat(
 
 
 def delete_chat(corpus_root: Path, chat_id: str) -> bool:
+    """Delete chat."""
     path = get_chat_path(corpus_root, chat_id)
     if path.exists():
         path.unlink()

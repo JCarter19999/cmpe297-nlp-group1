@@ -1,4 +1,6 @@
+"""Core logic for paper rerank."""
 from __future__ import annotations
+
 
 import math
 import re
@@ -15,6 +17,7 @@ import requests
 # --------------------------------------------------------
 @dataclass
 class RankedCandidate:
+    """Represents ranked candidate."""
     id: str
     title: str
     abstract: str
@@ -38,12 +41,14 @@ class RankedCandidate:
 
 @dataclass
 class SearchProfile:
+    """Represents search profile."""
     topic: str
     research_question: str = ""
     level: str = "undergraduate"   # high_school | undergraduate | masters | phd
     user_query: str = ""
 
     def effective_query(self) -> str:
+        """Effective query."""
         parts = []
         if self.user_query.strip():
             parts.append(self.user_query.strip())
@@ -58,15 +63,18 @@ class SearchProfile:
 # Basic math helpers
 # --------------------------------------------------------
 def _l2_norm(vec: Sequence[float]) -> float:
+    """Internal helper for l2 norm."""
     return math.sqrt(sum(v * v for v in vec)) or 1.0
 
 
 def cosine_similarity(a: Sequence[float], b: Sequence[float]) -> float:
+    """Cosine similarity."""
     dot = sum(x * y for x, y in zip(a, b))
     return float(dot / (_l2_norm(a) * _l2_norm(b)))
 
 
 def _safe_minmax_normalize(values: Sequence[float]) -> List[float]:
+    """Internal helper for safe minmax normalize."""
     if not values:
         return []
     vmin = min(values)
@@ -77,6 +85,7 @@ def _safe_minmax_normalize(values: Sequence[float]) -> List[float]:
 
 
 def _clamp01(x: float) -> float:
+    """Internal helper for clamp01."""
     return max(0.0, min(1.0, float(x)))
 
 
@@ -139,14 +148,17 @@ _TOKEN_RE = re.compile(r"\b[a-zA-Z0-9][a-zA-Z0-9\-_/]*\b")
 
 
 def tokenize(text: str) -> List[str]:
+    """Tokenize."""
     return _TOKEN_RE.findall((text or "").lower())
 
 
 def unique_tokens(text: str) -> set[str]:
+    """Unique tokens."""
     return set(tokenize(text))
 
 
 def token_overlap_ratio(a: str, b: str) -> float:
+    """Token overlap ratio."""
     ta = unique_tokens(a)
     tb = unique_tokens(b)
     if not ta or not tb:
@@ -155,6 +167,7 @@ def token_overlap_ratio(a: str, b: str) -> float:
 
 
 def safe_text_for_rank(title: str, abstract: str, max_abs_chars: int = 2000) -> str:
+    """Safe text for rank."""
     title = (title or "").strip()
     abstract = (abstract or "").strip()[:max_abs_chars]
     if title and abstract:
@@ -172,10 +185,12 @@ STOPWORDS = {
 
 
 def content_terms(text: str) -> List[str]:
+    """Content terms."""
     return [t for t in tokenize(text) if len(t) >= 3 and t not in STOPWORDS]
 
 
 def matched_terms(query_text: str, doc_text: str, max_terms: int = 8) -> List[str]:
+    """Matched terms."""
     q_terms = content_terms(query_text)
     d_terms = set(content_terms(doc_text))
     hits: List[str] = []
@@ -194,13 +209,16 @@ def matched_terms(query_text: str, doc_text: str, max_terms: int = 8) -> List[st
 # Embedding client
 # --------------------------------------------------------
 class OllamaEmbedder:
+    """Represents ollama embedder."""
     def __init__(self, host: str = "http://localhost:11434", model: str = "nomic-embed-text", timeout_s: int = 120):
+        """Initialize the instance."""
         self.host = host.rstrip("/")
         self.model = model
         self.timeout_s = timeout_s
         self.session = requests.Session()
 
     def _truncate(self, s: str, max_chars: int) -> str:
+        """Internal helper for truncate."""
         return (s or "").strip()[:max_chars]
 
     def embed_batch(
@@ -211,6 +229,7 @@ class OllamaEmbedder:
         max_chars_per_text: int = 4000,
         sleep_s: float = 0.0,
     ) -> List[List[float]]:
+        """Embed batch."""
         if not texts:
             return []
 
@@ -218,6 +237,7 @@ class OllamaEmbedder:
         out: List[List[float]] = []
 
         def try_embed_endpoint(batch: List[str]) -> Optional[List[List[float]]]:
+            """Try embed endpoint."""
             url = f"{self.host}/api/embed"
             payload = {"model": self.model, "input": batch}
             try:
@@ -234,6 +254,7 @@ class OllamaEmbedder:
             return None
 
         def fallback_embeddings(batch: List[str]) -> List[List[float]]:
+            """Fallback embeddings."""
             url = f"{self.host}/api/embeddings"
             embs: List[List[float]] = []
             for t in batch:
@@ -263,7 +284,9 @@ class OllamaEmbedder:
 # BM25
 # --------------------------------------------------------
 class BM25:
+    """Represents bm25."""
     def __init__(self, docs: Sequence[str], k1: float = 1.5, b: float = 0.75):
+        """Initialize the instance."""
         self.k1 = k1
         self.b = b
         self.docs = [self._tokenize(d) for d in docs]
@@ -278,9 +301,11 @@ class BM25:
         self.N = len(self.docs)
 
     def _tokenize(self, text: str) -> List[str]:
+        """Internal helper for tokenize."""
         return tokenize(text)
 
     def score(self, query: str, doc_index: int) -> float:
+        """Score."""
         if self.N == 0 or self.avgdl <= 0:
             return 0.0
 
@@ -321,6 +346,7 @@ def llm_relevance_score_safe(
     level: str = "undergraduate",
     timeout_s: int = 45,
 ) -> Tuple[float, Optional[str]]:
+    """Llm relevance score safe."""
     prompt = f"""
 You are a relevance scorer for knowledge-source search.
 
@@ -373,6 +399,7 @@ ADVANCED_HINTS = {
 
 
 def audience_alignment_score(title: str, abstract: str, level: str) -> float:
+    """Audience alignment score."""
     text = f"{title} {abstract}".lower()
     beginner_hits = sum(1 for kw in BEGINNER_HINTS if kw in text)
     advanced_hits = sum(1 for kw in ADVANCED_HINTS if kw in text)
@@ -394,6 +421,7 @@ def audience_alignment_score(title: str, abstract: str, level: str) -> float:
 
 
 def infer_document_level(title: str, abstract: str) -> str:
+    """Infer document level."""
     text = f"{title} {abstract}".lower()
     beginner_hits = sum(1 for kw in BEGINNER_HINTS if kw in text)
     advanced_hits = sum(1 for kw in ADVANCED_HINTS if kw in text)
@@ -453,6 +481,7 @@ def candidate_hygiene_filter(c: Dict[str, Any]) -> Tuple[bool, List[str]]:
 
 
 def lexical_prefilter_score(c: Dict[str, Any], profile: SearchProfile) -> float:
+    """Lexical prefilter score."""
     title = str(c.get("title") or "")
     abstract = str(c.get("abstract") or "")
     doc_text = f"{title}\n{abstract}"
@@ -481,6 +510,7 @@ def build_filtered_candidate_pool(
     lexical_keep_k: int = 25,
     lexical_min_score: float = 0.03,
 ) -> List[Dict[str, Any]]:
+    """Build filtered candidate pool."""
     staged: List[Dict[str, Any]] = []
 
     for c in candidates:
@@ -523,6 +553,7 @@ def rerank_layered(
     epsilon_audience: float = 0.05,
     abstract_max_chars: int = 2000,
 ) -> Tuple[List[RankedCandidate], List[str]]:
+    """Rerank layered."""
     warnings: List[str] = []
 
     pool = build_filtered_candidate_pool(

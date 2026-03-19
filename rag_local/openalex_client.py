@@ -1,4 +1,6 @@
+"""Core logic for openalex client."""
 from __future__ import annotations
+
 
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
@@ -29,6 +31,7 @@ def _reconstruct_abstract(abstract_inverted_index: Optional[Dict[str, List[int]]
 
 @dataclass
 class OACandidate:
+    """Represents oacandidate."""
     id: str
     title: str
     abstract: str
@@ -38,7 +41,9 @@ class OACandidate:
 
 
 class OpenAlexClient:
+    """Represents open alex client."""
     def __init__(self, base_url: str = "https://api.openalex.org", timeout_s: int = 30):
+        """Initialize the instance."""
         self.base_url = base_url.rstrip("/")
         self.timeout_s = timeout_s
         self.session = requests.Session()

@@ -121,8 +121,10 @@ class Embedder(Protocol):
     - TF-IDF baseline
     """
     def embed_texts(self, texts: Sequence[str]) -> List[List[float]]:
+        """Embed texts."""
         ...
     def embed_query(self, query: str) -> List[float]:
+        """Embed query."""
         ...
 
 # -----------------------------
@@ -133,13 +135,17 @@ class LocalVectorIndex(Protocol):
     Minimal index interface required by the project.
     """
     def add(self, chunks: Sequence[Chunk]) -> None:
+        """Add."""
         ...
     def search(self, query: str, top_k: int = 5) -> List[SearchResult]:
+        """Search."""
         ...
     def save(self, path: Union[str, Path]) -> None:
+        """Save."""
         ...
     @classmethod
     def load(cls, path: Union[str, Path], *, embedder: Embedder) -> "LocalVectorIndex":
+        """Load."""
         ...
 
 # -----------------------------
@@ -160,6 +166,7 @@ class SimpleLocalIndex:
     nn: Any  # sklearn NearestNeighbors instance or None
 
     def __init__(self, *, embedder: Embedder) -> None:
+        """Initialize the instance."""
         self.embedder = embedder
         self.chunks = []
         self.vectors = []

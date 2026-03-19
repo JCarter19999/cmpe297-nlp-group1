@@ -1,4 +1,6 @@
+"""Core logic for openalex fetch."""
 from __future__ import annotations
+
 
 import json
 import re
@@ -33,6 +35,7 @@ except Exception:
 # ---------------------------------------------------------
 @dataclass
 class MaterializedPaper:
+    """Represents materialized paper."""
     openalex_id: str
     title: str
     year: Optional[int]
@@ -49,6 +52,7 @@ class MaterializedPaper:
 # Text / path helpers
 # ---------------------------------------------------------
 def _slugify(text: str, max_len: int = 80) -> str:
+    """Internal helper for slugify."""
     text = (text or "").strip().lower()
     text = re.sub(r"[^a-z0-9]+", "-", text)
     text = re.sub(r"-{2,}", "-", text).strip("-")
@@ -58,22 +62,27 @@ def _slugify(text: str, max_len: int = 80) -> str:
 
 
 def _query_slug(query: str) -> str:
+    """Internal helper for query slug."""
     return _slugify(query or "openalex-search", max_len=60)
 
 
 def _safe_filename(text: str, max_len: int = 120) -> str:
+    """Internal helper for safe filename."""
     return _slugify(text or "paper", max_len=max_len)
 
 
 def _ensure_dir(path: Path) -> None:
+    """Internal helper for ensure dir."""
     path.mkdir(parents=True, exist_ok=True)
 
 
 def _now_ts() -> str:
+    """Internal helper for now ts."""
     return time.strftime("%Y-%m-%d %H:%M:%S")
 
 
 def _extract_host(url: str) -> str:
+    """Internal helper for extract host."""
     try:
         return urlparse(url).netloc or ""
     except Exception:
@@ -90,6 +99,7 @@ DEFAULT_HEADERS = {
 
 
 def _is_probably_pdf_response(resp: requests.Response) -> bool:
+    """Internal helper for is probably pdf response."""
     content_type = (resp.headers.get("Content-Type") or "").lower()
     if "application/pdf" in content_type:
         return True
@@ -118,6 +128,7 @@ def _download_url(
     timeout_s: int = 60,
     allow_redirects: bool = True,
 ) -> requests.Response:
+    """Internal helper for download url."""
     r = requests.get(
         url,
         headers=DEFAULT_HEADERS,
@@ -186,10 +197,12 @@ def _extract_text_from_pdf_bytes(pdf_bytes: bytes) -> Tuple[str, str]:
 # Materialization helpers
 # ---------------------------------------------------------
 def _write_text(path: Path, text: str) -> None:
+    """Internal helper for write text."""
     path.write_text(text, encoding="utf-8", errors="ignore")
 
 
 def _write_json(path: Path, obj: Dict[str, Any]) -> None:
+    """Internal helper for write json."""
     path.write_text(json.dumps(obj, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
@@ -203,6 +216,7 @@ def _build_metadata_record(
     pdf_saved: bool,
     txt_saved: bool,
 ) -> Dict[str, Any]:
+    """Internal helper for build metadata record."""
     raw = dict(item.get("raw") or {})
     return {
         "source": "openalex",
@@ -231,6 +245,7 @@ def _build_indexable_text(
     content_tier: str,
     note: str,
 ) -> str:
+    """Internal helper for build indexable text."""
     title = (item.get("title") or "").strip()
     abstract = (item.get("abstract") or "").strip()
     year = item.get("year")
