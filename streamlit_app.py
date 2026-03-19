@@ -115,6 +115,8 @@ def cached_openalex_search(query: str, limit: int, mailto: str):
 def _init_state():
     if "messages" not in st.session_state:
         st.session_state.messages = []
+    if "model_option" not in st.session_state:
+        st.session_state.model_option = "llama3.1:8b" 
     if "index" not in st.session_state:
         st.session_state.index = None
     if "cfg" not in st.session_state:
@@ -274,11 +276,18 @@ ollama_host = st.sidebar.text_input(
     value=st.session_state.cfg.get("ollama_host", "http://localhost:11434"),
     disabled=not modify_ollama_settings
 )
-chat_model = st.sidebar.text_input(
+#chat_model = st.sidebar.text_input(
+#    "Chat model",
+#    value=st.session_state.cfg.get("chat_model", st.session_state.cfg.get("model", "llama3.1:8b")),
+#)
+
+chat_model = st.sidebar.selectbox(
     "Chat model",
-    value=st.session_state.cfg.get("chat_model", st.session_state.cfg.get("model", "llama3.1:8b")),
-    disabled=not modify_ollama_settings
+    options=["llama3.1:8b", "llama3.2:3b"],
+    index=0 if st.session_state.cfg.get("model") == "llama3.2:3b" else 0,
+    help="Select the active Ollama model. 3.1:8b is default for precision; 3.2:3b is faster for lighter hardware."
 )
+
 system_prompt = st.sidebar.text_area(
     "System prompt",
     value=st.session_state.cfg.get(
